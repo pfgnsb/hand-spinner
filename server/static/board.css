@@ -1,0 +1,157 @@
+:root {
+  color: #2c261f;
+  background: #f3eee6;
+  font-family: "Yu Gothic UI", "Yu Gothic", "Hiragino Sans", Meiryo, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.topbar {
+  padding: 28px 28px 8px;
+}
+
+.kicker {
+  margin: 0 0 4px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: #7a6a58;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 700;
+}
+
+h1 {
+  font-size: 28px;
+}
+
+.note {
+  margin: 8px 0 0;
+  color: #7a6a58;
+  font-size: 14px;
+}
+
+.board {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 20px 28px 40px;
+  overflow-x: auto;
+}
+
+.state {
+  width: 260px;
+  flex: 0 0 260px;
+  background: #fffdf9;
+  border: 1px solid #e4d8c8;
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.state h2 {
+  margin-bottom: 12px;
+  font-size: 18px;
+}
+
+.works {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.work {
+  background: #fff;
+  border: 1px solid #eadfce;
+  border-radius: 12px;
+  padding: 12px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.work.is-dragging {
+  opacity: 0.35;
+}
+
+.work h3,
+.work-title-input {
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.work-title-input {
+  width: 100%;
+  border: 1px solid #e4d8c8;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font: inherit;
+  font-weight: 700;
+}
+
+.work-actions,
+.adder {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.work-actions {
+  margin-top: 10px;
+}
+
+button,
+.adder input {
+  font: inherit;
+}
+
+button {
+  border: 1px solid #e4d8c8;
+  border-radius: 999px;
+  background: #fff;
+  color: #2c261f;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.adder {
+  margin-top: 12px;
+}
+
+.adder input {
+  flex: 1 1 120px;
+  min-width: 0;
+  border: 1px solid #e4d8c8;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.adder-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: #9a3b2f;
+  font-size: 12px;
+}
+
+.drop-line {
+  height: 4px;
+  border-radius: 999px;
+  background: #8c4a2f;
+}
+
+button,
+.adder input,
+.work-title-input {
+  touch-action: auto;
+}

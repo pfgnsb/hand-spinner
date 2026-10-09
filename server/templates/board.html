@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ board_name }}</title>
+    <link rel="stylesheet" href="/static/board.css?v=2" />
+  </head>
+  <body>
+    <header class="topbar">
+      <p class="kicker">選択ボード</p>
+      <h1>{{ board_name }}</h1>
+      <p class="note">作品はつまんで移動できます。追加、編集、削除、移動は、この画面に残ります。</p>
+    </header>
+    <main class="board" aria-label="選択ボード">
+      {% for state in states %}
+      <section class="state" aria-label="{{ state.name }}" data-id="{{ state.id }}">
+        <h2>{{ state.name }}</h2>
+        <div class="works">
+          {% for work in state.works %}
+          <article class="work" data-id="{{ work.id }}" draggable="false">
+            <h3 class="work-title">{{ work.name }}</h3>
+            <div class="work-actions">
+              <button type="button" data-action="edit">編集</button>
+              <button type="button" data-action="delete">削除</button>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        <form class="adder">
+          <input type="text" aria-label="{{ state.name }}に追加する作品の名前" />
+          <button type="submit">追加</button>
+          <p class="adder-error" hidden>名前を入力してください。</p>
+        </form>
+      </section>
+      {% endfor %}
+    </main>
+    <script src="/static/board.js?v=2"></script>
+  </body>
+</html>
