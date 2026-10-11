@@ -1,7 +1,0 @@
-Thumbs.db
-Desktop.ini
-.DS_Store
-server/.venv/
-server/data/
-__pycache__/
-*.pyc

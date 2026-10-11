@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ハンドスピナー</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      background: #f3f0e8;
+    }
+
+    .axis {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, #1c1c1c 0 7px, #d7dbe2 8px 100%);
+      box-shadow:
+        inset 0 0 0 4px #9aa1ab,
+        0 1px 2px rgba(0, 0, 0, 0.25);
+    }
+  </style>
+</head>
+<body>
+  <div class="axis" role="img" aria-label="中央の軸"></div>
+</body>
+</html>
