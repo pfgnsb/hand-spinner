@@ -45,8 +45,8 @@
     .mover {
       position: relative;
       z-index: 2;
-      width: 30cm;
-      height: 30cm;
+      width: 10cm;
+      height: 10cm;
       pointer-events: none;
     }
 
@@ -57,7 +57,8 @@
     }
 
     .arm,
-    .axis {
+    .axis,
+    .joints {
       pointer-events: auto;
     }
 
@@ -65,9 +66,9 @@
       position: absolute;
       left: 50%;
       top: 50%;
-      width: 0.35cm;
-      height: 15cm;
-      margin-left: -0.175cm;
+      width: 4.1cm;
+      height: 4.2cm;
+      margin-left: -2.05cm;
       background: #111;
       transform-origin: top center;
     }
@@ -88,16 +89,29 @@
       position: absolute;
       left: 50%;
       bottom: 0;
-      width: 1.6cm;
-      height: 1.6cm;
-      margin-left: -0.8cm;
-      margin-bottom: -0.8cm;
+      width: 4.1cm;
+      height: 4.1cm;
+      margin-left: -2.05cm;
+      margin-bottom: -2.05cm;
       background: #111;
       border-radius: 50%;
     }
 
     .spinner.square .tip {
       border-radius: 0;
+    }
+
+    .joints {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .joints path {
+      fill: #111;
     }
 
     .axis {
@@ -116,37 +130,94 @@
   </style>
 </head>
 <body>
-  <button type="button" class="speed left" id="slow">1.0倍</button>
-  <button type="button" class="speed right" id="quick">1.0倍</button>
+  <button type="button" class="speed left" id="slow">0.5倍</button>
+  <button type="button" class="speed right" id="quick">2.5倍</button>
   <div class="mover" id="mover">
     <div class="spinner" id="spinner">
       <div class="arm"><span class="tip"></span></div>
       <div class="arm"><span class="tip"></span></div>
       <div class="arm"><span class="tip"></span></div>
+      <svg class="joints" viewBox="-5 -5 10 10" aria-hidden="true">
+        <path d="M 0.35 -0.4 L 0.35 -1.9 Q 2.639 -1.523 1.82 0.647 L 0.521 -0.103 Z"></path>
+        <path d="M 0.35 -0.4 L 0.35 -1.9 Q 2.639 -1.523 1.82 0.647 L 0.521 -0.103 Z" transform="rotate(120)"></path>
+        <path d="M 0.35 -0.4 L 0.35 -1.9 Q 2.639 -1.523 1.82 0.647 L 0.521 -0.103 Z" transform="rotate(240)"></path>
+      </svg>
       <div class="axis" role="img" aria-label="中央の軸"></div>
     </div>
   </div>
   <script>
     var spinner = document.getElementById("spinner");
-    var mover = document.getElementById("mover");
     var angle = -15;
     var omega = 0;
-    var decay = 0;
     var speed = 1;
-    var bobbing = false;
-    var bobOffset = 0;
-    var bobStart = 0;
     var last = 0;
     var drag = null;
-    var BOB_CM = 5;
-    var BOB_MS = 30000;
+    var gestureAt = 0;
+    var CLICK_MOVE = 6;
+    var SPIN = 0.36;
+    var SLOW = 0.5;
+    var QUICK = 2.5;
+    var ARM_NORMAL = 4.2;
+    var ARM_MIN = 1;
+    var ARM_MAX = 8;
+    var ARM_HOLD = 1000;
+    var ARM_CM_PER_MS = 3.2 / 3000;
+    var arms = spinner.querySelectorAll(".arm");
+    var armsChanging = false;
+    var armPhase = "";
+    var armFrom = ARM_NORMAL;
+    var armTo = ARM_MIN;
+    var armPhaseStart = 0;
+    var armMoveMs = 1;
+
+    function ease(t) {
+      return 0.5 - 0.5 * Math.cos(Math.PI * t);
+    }
+
+    function startMove(now, from, to) {
+      armPhase = "move";
+      armFrom = from;
+      armTo = to;
+      armPhaseStart = now;
+      armMoveMs = Math.max(Math.abs(to - from) / ARM_CM_PER_MS, 1);
+    }
+
+    function startHold(now, length, next) {
+      armPhase = "hold";
+      armFrom = length;
+      armTo = next;
+      armPhaseStart = now;
+    }
+
+    function armLength(now) {
+      if (speed !== QUICK) {
+        armsChanging = false;
+        return ARM_NORMAL;
+      }
+      if (!armsChanging) {
+        armsChanging = true;
+        startMove(now, ARM_NORMAL, ARM_MIN);
+      }
+      if (armPhase === "hold") {
+        if (now - armPhaseStart >= ARM_HOLD) {
+          startMove(now, armFrom, armTo);
+        }
+        return armFrom;
+      }
+      var t = (now - armPhaseStart) / armMoveMs;
+      if (t >= 1) {
+        var arrived = armTo;
+        startHold(now, arrived, arrived === ARM_MIN ? ARM_MAX : ARM_MIN);
+        return arrived;
+      }
+      return armFrom + (armTo - armFrom) * ease(t);
+    }
 
     function draw(now) {
-      var bob = bobOffset;
-      if (bobbing) {
-        bob = BOB_CM * Math.sin(((now - bobStart) / BOB_MS) * Math.PI * 2);
+      var length = armLength(now);
+      for (var i = 0; i < arms.length; i++) {
+        arms[i].style.height = length + "cm";
       }
-      mover.style.transform = "translateY(" + bob + "cm)";
       spinner.style.transform = "rotate(" + angle + "deg)";
     }
 
@@ -156,29 +227,9 @@
       }
       var dt = now - last;
       last = now;
-      if (omega !== 0) {
-        var before = omega;
-        angle += omega * dt * speed;
-        omega -= Math.sign(before) * decay * dt;
-        if (before * omega <= 0) {
-          omega = 0;
-        }
-      }
+      angle += omega * dt * speed;
       draw(now);
       requestAnimationFrame(frame);
-    }
-
-    function centerOf(event) {
-      var rect = spinner.getBoundingClientRect();
-      return {
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2
-      };
-    }
-
-    function pointerAngle(event) {
-      var center = centerOf(event);
-      return Math.atan2(event.clientY - center.y, event.clientX - center.x) * 180 / Math.PI;
     }
 
     spinner.addEventListener("pointerdown", function (event) {
@@ -186,10 +237,7 @@
         return;
       }
       drag = {
-        lastAngle: pointerAngle(event),
-        swept: 0,
         moved: 0,
-        start: performance.now(),
         x: event.clientX,
         y: event.clientY
       };
@@ -200,52 +248,55 @@
       if (!drag) {
         return;
       }
-      var next = pointerAngle(event);
-      var delta = next - drag.lastAngle;
-      if (delta > 180) {
-        delta -= 360;
-      }
-      if (delta < -180) {
-        delta += 360;
-      }
-      drag.swept += delta;
-      drag.lastAngle = next;
       drag.moved = Math.hypot(event.clientX - drag.x, event.clientY - drag.y);
     });
 
-    function endDrag(event) {
+    function endPointer(event) {
       if (!drag) {
         return;
       }
       var moved = drag.moved;
-      var swept = drag.swept;
-      var elapsed = Math.max(performance.now() - drag.start, 16);
       drag = null;
-      if (moved < 6) {
+      gestureAt = performance.now();
+      if (moved >= CLICK_MOVE) {
         return;
       }
-      omega = swept / elapsed;
-      decay = Math.max(0.00035, Math.abs(omega) * 0.8);
+      omega = SPIN;
     }
 
-    spinner.addEventListener("pointerup", endDrag);
-    spinner.addEventListener("pointercancel", endDrag);
+    spinner.addEventListener("pointerup", endPointer);
+    spinner.addEventListener("pointercancel", function () {
+      drag = null;
+    });
 
-    document.querySelectorAll(".speed").forEach(function (button) {
+    function holdSpeed(button, rate) {
       button.addEventListener("pointerdown", function (event) {
+        if (event.button !== 0) {
+          return;
+        }
+        event.stopPropagation();
+        speed = rate;
+        button.setPointerCapture(event.pointerId);
+      });
+      function release(event) {
         event.stopPropagation();
         speed = 1;
-      });
-      button.addEventListener("pointerup", function () {
-        speed = 1;
-      });
+      }
+      button.addEventListener("pointerup", release);
+      button.addEventListener("pointercancel", release);
       button.addEventListener("click", function (event) {
         event.stopPropagation();
       });
-    });
+    }
+
+    holdSpeed(document.getElementById("slow"), SLOW);
+    holdSpeed(document.getElementById("quick"), QUICK);
 
     document.addEventListener("click", function (event) {
-      if (event.target.closest(".arm") || event.target.closest(".axis") || event.target.closest(".speed")) {
+      if (performance.now() - gestureAt < 400) {
+        return;
+      }
+      if (event.target.closest(".arm") || event.target.closest(".axis") || event.target.closest(".joints") || event.target.closest(".speed")) {
         return;
       }
       var top = spinner.getBoundingClientRect().top;
@@ -253,13 +304,7 @@
         spinner.classList.toggle("square");
         return;
       }
-      if (bobbing) {
-        bobOffset = BOB_CM * Math.sin(((performance.now() - bobStart) / BOB_MS) * Math.PI * 2);
-        bobbing = false;
-        return;
-      }
-      bobbing = true;
-      bobStart = performance.now();
+      omega = 0;
     });
 
     requestAnimationFrame(frame);
