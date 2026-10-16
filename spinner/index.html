@@ -20,26 +20,25 @@
       background: #fff;
     }
 
-    .speed {
+    .turn {
       position: fixed;
       top: 50%;
       z-index: 1;
-      height: 1.4cm;
-      margin-top: -0.7cm;
-      border: 1px solid #222;
-      background: #fff;
-      font: 16px sans-serif;
-      cursor: pointer;
+      margin: 0;
+      transform: translateY(-50%);
+      color: #111;
+      font: 1.8cm sans-serif;
+      line-height: 1;
+      pointer-events: none;
+      user-select: none;
     }
 
-    .speed.left {
-      left: 0;
-      width: 50%;
+    .turn.left {
+      left: 0.6cm;
     }
 
-    .speed.right {
-      right: 0;
-      width: 50%;
+    .turn.right {
+      right: 0.6cm;
     }
 
     .mover {
@@ -48,6 +47,7 @@
       width: 10cm;
       height: 10cm;
       pointer-events: none;
+      transform: scale(0.9);
     }
 
     .spinner {
@@ -97,10 +97,6 @@
       border-radius: 50%;
     }
 
-    .spinner.square .tip {
-      border-radius: 0;
-    }
-
     .joints {
       position: absolute;
       left: 0;
@@ -130,8 +126,8 @@
   </style>
 </head>
 <body>
-  <button type="button" class="speed left" id="slow">0.5倍</button>
-  <button type="button" class="speed right" id="quick">2.5倍</button>
+  <div class="turn left" aria-hidden="true">↺</div>
+  <div class="turn right" aria-hidden="true">↻</div>
   <div class="mover" id="mover">
     <div class="spinner" id="spinner">
       <div class="arm"><span class="tip"></span></div>
@@ -155,8 +151,7 @@
     var gestureAt = 0;
     var CLICK_MOVE = 6;
     var SPIN = 0.36;
-    var SLOW = 0.5;
-    var QUICK = 2.5;
+    var FAST = 2;
     var ARM_NORMAL = 4.2;
     var ARM_MIN = 1;
     var ARM_MAX = 8;
@@ -190,7 +185,7 @@
     }
 
     function armLength(now) {
-      if (speed !== QUICK) {
+      if (speed !== FAST) {
         armsChanging = false;
         return ARM_NORMAL;
       }
@@ -261,7 +256,7 @@
       if (moved >= CLICK_MOVE) {
         return;
       }
-      omega = SPIN;
+      omega = omega === 0 ? SPIN : 0;
     }
 
     spinner.addEventListener("pointerup", endPointer);
@@ -269,39 +264,24 @@
       drag = null;
     });
 
-    function holdSpeed(button, rate) {
-      button.addEventListener("pointerdown", function (event) {
-        if (event.button !== 0) {
-          return;
-        }
-        event.stopPropagation();
-        speed = rate;
-        button.setPointerCapture(event.pointerId);
-      });
-      function release(event) {
-        event.stopPropagation();
-        speed = 1;
-      }
-      button.addEventListener("pointerup", release);
-      button.addEventListener("pointercancel", release);
-      button.addEventListener("click", function (event) {
-        event.stopPropagation();
-      });
-    }
-
-    holdSpeed(document.getElementById("slow"), SLOW);
-    holdSpeed(document.getElementById("quick"), QUICK);
-
     document.addEventListener("click", function (event) {
       if (performance.now() - gestureAt < 400) {
         return;
       }
-      if (event.target.closest(".arm") || event.target.closest(".axis") || event.target.closest(".joints") || event.target.closest(".speed")) {
+      if (event.target.closest(".arm") || event.target.closest(".axis") || event.target.closest(".joints")) {
         return;
       }
-      var top = spinner.getBoundingClientRect().top;
-      if (event.clientY < top) {
-        spinner.classList.toggle("square");
+      var box = spinner.getBoundingClientRect();
+      if (event.clientY < box.top) {
+        speed = speed === FAST ? 1 : FAST;
+        return;
+      }
+      if (event.clientX < box.left) {
+        omega = -SPIN;
+        return;
+      }
+      if (event.clientX > box.right) {
+        omega = SPIN;
         return;
       }
       omega = 0;
