@@ -1,0 +1,29 @@
+---
+description: Issue を先に作り、作業ブランチから Pull Request で main に入れる
+alwaysApply: true
+---
+
+# Git 運用
+
+コードやドキュメントを変える前に、必ず次の順で進める。
+
+1. Issue を作る（`gh issue create`）。タイトルと、何を変えるかを本文に書く。
+2. `main` では作業しない。`main` から次の名前のブランチを切る。
+   - `feature/<issue番号>-<短い名前>`
+   - `fix/<issue番号>-<短い名前>`
+   - `docs/<issue番号>-<短い名前>`
+   - `chore/<issue番号>-<短い名前>`
+   - 例: `docs/2-update-howto`、`fix/3-spin-direction`
+3. そのブランチへコミットして push し、Pull Request を作る。本文に `Closes #<番号>` を書く。
+4. Pull Request をマージして `main` に入れる。レビュー人数は要求しない。
+
+`main` への直接コミット、直接 push、force push はしない。
+
+```text
+# 例
+gh issue create --title "操作手順を追記する" --body "..."
+git checkout -b docs/2-update-howto
+# 作業してコミット
+git push -u origin HEAD
+gh pr create --title "操作手順を追記する" --body "Closes #2"
+```
