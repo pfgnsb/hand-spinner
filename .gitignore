@@ -4,3 +4,16 @@ Desktop.ini
 .venv/
 __pycache__/
 *.pyc
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*.auto.tfvars
+*.tfvars
+tfplan
+infra/keys/

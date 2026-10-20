@@ -1,0 +1,13 @@
+[Unit]
+Description=Kazaguruma
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ec2-user
+WorkingDirectory=/opt/kazaguruma
+ExecStart=/usr/bin/node /opt/kazaguruma/server.js
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
