@@ -123,68 +123,8 @@
     var CLICK_MOVE = 6;
     var SPIN = 0.36;
     var FAST = 2;
-    var ARM_NORMAL = 4.2;
-    var ARM_MIN = 1;
-    var ARM_MAX = 8;
-    var ARM_HOLD = 1000;
-    var ARM_CM_PER_MS = 3.2 / 3000;
-    var armsChanging = false;
-    var armPhase = "";
-    var armFrom = ARM_NORMAL;
-    var armTo = ARM_MIN;
-    var armPhaseStart = 0;
-    var armMoveMs = 1;
 
-    function ease(t) {
-      return 0.5 - 0.5 * Math.cos(Math.PI * t);
-    }
-
-    function startMove(now, from, to) {
-      armPhase = "move";
-      armFrom = from;
-      armTo = to;
-      armPhaseStart = now;
-      armMoveMs = Math.max(Math.abs(to - from) / ARM_CM_PER_MS, 1);
-    }
-
-    function startHold(now, length, next) {
-      armPhase = "hold";
-      armFrom = length;
-      armTo = next;
-      armPhaseStart = now;
-    }
-
-    function armLength(now) {
-      if (speed !== FAST) {
-        armsChanging = false;
-        return ARM_NORMAL;
-      }
-      if (!armsChanging) {
-        armsChanging = true;
-        startMove(now, ARM_NORMAL, ARM_MIN);
-      }
-      if (armPhase === "hold") {
-        if (now - armPhaseStart >= ARM_HOLD) {
-          startMove(now, armFrom, armTo);
-        }
-        return armFrom;
-      }
-      var t = (now - armPhaseStart) / armMoveMs;
-      if (t >= 1) {
-        var arrived = armTo;
-        startHold(now, arrived, arrived === ARM_MIN ? ARM_MAX : ARM_MIN);
-        return arrived;
-      }
-      return armFrom + (armTo - armFrom) * ease(t);
-    }
-
-    function draw(now) {
-      var length = armLength(now);
-      var size = length * 2;
-      spinner.style.width = size + "cm";
-      spinner.style.height = size + "cm";
-      spinner.style.marginLeft = -length + "cm";
-      spinner.style.marginTop = -length + "cm";
+    function draw() {
       spinner.style.transform = "rotate(" + angle + "deg)";
     }
 
@@ -195,7 +135,7 @@
       var dt = now - last;
       last = now;
       angle += omega * dt * speed;
-      draw(now);
+      draw();
       requestAnimationFrame(frame);
     }
 
