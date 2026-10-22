@@ -5,6 +5,10 @@ Desktop.ini
 __pycache__/
 *.pyc
 
+# Node / Wrangler
+node_modules/
+.wrangler/
+
 # Terraform
 .terraform/
 *.tfstate

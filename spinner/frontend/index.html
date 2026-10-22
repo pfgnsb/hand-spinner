@@ -120,6 +120,10 @@
     var last = 0;
     var drag = null;
     var gestureAt = 0;
+    var ready = false;
+    var loaded = false;
+    var tick = null;
+    var saveQueue = Promise.resolve();
     var CLICK_MOVE = 6;
     var SPIN = 0.36;
     var FAST = 2;
@@ -128,19 +132,49 @@
       spinner.style.transform = "rotate(" + angle + "deg)";
     }
 
+    function payload() {
+      return JSON.stringify({ angle: angle, omega: omega, speed: speed });
+    }
+
+    function saveState() {
+      if (!loaded) {
+        return;
+      }
+      var body = payload();
+      saveQueue = saveQueue.then(function () {
+        return fetch("/api/state", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: body
+        });
+      }).catch(function () {});
+    }
+
+    function syncTick() {
+      if (omega !== 0 && !tick) {
+        tick = setInterval(saveState, 400);
+      }
+      if (omega === 0 && tick) {
+        clearInterval(tick);
+        tick = null;
+      }
+    }
+
     function frame(now) {
       if (!last) {
         last = now;
       }
       var dt = now - last;
       last = now;
-      angle += omega * dt * speed;
+      if (omega !== 0) {
+        angle += omega * dt * speed;
+      }
       draw();
       requestAnimationFrame(frame);
     }
 
     toy.addEventListener("pointerdown", function (event) {
-      if (event.button !== 0) {
+      if (!ready || event.button !== 0) {
         return;
       }
       drag = {
@@ -169,6 +203,8 @@
         return;
       }
       omega = omega === 0 ? SPIN : 0;
+      saveState();
+      syncTick();
     }
 
     toy.addEventListener("pointerup", endPointer);
@@ -177,6 +213,9 @@
     });
 
     document.addEventListener("click", function (event) {
+      if (!ready) {
+        return;
+      }
       if (performance.now() - gestureAt < 400) {
         return;
       }
@@ -186,20 +225,60 @@
       var box = spinner.getBoundingClientRect();
       if (event.clientY < box.top) {
         speed = speed === FAST ? 1 : FAST;
+        saveState();
         return;
       }
       if (event.clientX < box.left) {
         omega = -SPIN;
+        saveState();
+        syncTick();
         return;
       }
       if (event.clientX > box.right) {
         omega = SPIN;
+        saveState();
+        syncTick();
         return;
       }
       omega = 0;
+      saveState();
+      syncTick();
     });
 
-    requestAnimationFrame(frame);
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "hidden") {
+        saveState();
+      }
+    });
+
+    window.addEventListener("pagehide", function () {
+      if (!loaded) {
+        return;
+      }
+      fetch("/api/state", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: payload(),
+        keepalive: true
+      });
+    });
+
+    fetch("/api/state").then(function (res) {
+      if (!res.ok) {
+        throw new Error("state");
+      }
+      return res.json();
+    }).then(function (state) {
+      angle = Number(state.angle);
+      omega = Number(state.omega);
+      speed = Number(state.speed);
+      loaded = true;
+    }).catch(function () {}).then(function () {
+      ready = true;
+      draw();
+      syncTick();
+      requestAnimationFrame(frame);
+    });
   </script>
 </body>
 </html>
