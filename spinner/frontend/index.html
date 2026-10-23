@@ -94,9 +94,67 @@
       box-shadow: 0 0.04cm 0.08cm rgba(0, 0, 0, 0.25);
       pointer-events: auto;
     }
+
+    .account {
+      position: fixed;
+      top: 0.4cm;
+      left: 50%;
+      z-index: 3;
+      transform: translateX(-50%);
+      max-width: 92vw;
+      padding: 0.25cm 0.4cm;
+      background: #fff;
+      border: 1px solid #111;
+      color: #111;
+      font: 0.38cm sans-serif;
+    }
+
+    .account form,
+    #session {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25cm 0.35cm;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .account label {
+      display: flex;
+      gap: 0.15cm;
+      align-items: center;
+    }
+
+    .account input,
+    .account button {
+      font: inherit;
+      color: #111;
+    }
+
+    .account input {
+      width: 4.2cm;
+    }
+
+    .account p {
+      flex-basis: 100%;
+      margin: 0;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
+  <div class="account" id="account">
+    <form id="login-form">
+      <label>名前 <input id="name" name="name" autocomplete="username" maxlength="32"></label>
+      <label>パスワード <input id="password" name="password" type="password" autocomplete="current-password" maxlength="64"></label>
+      <button type="submit">ログイン</button>
+      <button type="button" id="register">登録</button>
+      <p id="account-message">ログインすると回せます。</p>
+    </form>
+    <div id="session" hidden>
+      <span id="who"></span>
+      <button type="button" id="logout">ログアウト</button>
+    </div>
+  </div>
   <div class="turn left" aria-hidden="true">↺</div>
   <div class="turn right" aria-hidden="true">↻</div>
   <div class="toy" id="toy">
@@ -114,6 +172,12 @@
   <script>
     var toy = document.getElementById("toy");
     var spinner = document.getElementById("spinner");
+    var loginForm = document.getElementById("login-form");
+    var sessionBar = document.getElementById("session");
+    var who = document.getElementById("who");
+    var message = document.getElementById("account-message");
+    var nameInput = document.getElementById("name");
+    var passwordInput = document.getElementById("password");
     var angle = -15;
     var omega = 0;
     var speed = 1;
@@ -136,6 +200,88 @@
       return JSON.stringify({ angle: angle, omega: omega, speed: speed });
     }
 
+    function showLogin(text) {
+      loginForm.hidden = false;
+      sessionBar.hidden = true;
+      ready = false;
+      loaded = false;
+      omega = 0;
+      syncTick();
+      message.textContent = text || "ログインすると回せます。";
+    }
+
+    function showSession(name) {
+      loginForm.hidden = true;
+      sessionBar.hidden = false;
+      who.textContent = name;
+      passwordInput.value = "";
+    }
+
+    function applyState(state) {
+      angle = Number(state.angle);
+      omega = Number(state.omega);
+      speed = Number(state.speed);
+      loaded = true;
+      ready = true;
+      draw();
+      syncTick();
+    }
+
+    function loadState() {
+      return fetch("/api/state").then(function (res) {
+        if (res.status === 401) {
+          showLogin("ログインすると回せます。");
+          return null;
+        }
+        if (!res.ok) {
+          throw new Error("state");
+        }
+        return res.json();
+      }).then(function (state) {
+        if (state) {
+          applyState(state);
+        }
+      });
+    }
+
+    function explainAuth(status, body) {
+      if (status === 409 || (body && body.error === "taken")) {
+        message.textContent = "その名前は使われています。";
+        return;
+      }
+      if (status === 401) {
+        message.textContent = "名前またはパスワードが違います。";
+        return;
+      }
+      message.textContent = "名前は英数字、_、- で1から32文字です。パスワードは8から64文字です。";
+    }
+
+    function auth(path) {
+      return fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: nameInput.value,
+          password: passwordInput.value
+        })
+      }).then(function (res) {
+        return res.json().then(function (body) {
+          return { ok: res.ok, status: res.status, body: body };
+        }).catch(function () {
+          return { ok: res.ok, status: res.status, body: null };
+        });
+      }).then(function (result) {
+        if (!result.ok) {
+          explainAuth(result.status, result.body);
+          return;
+        }
+        showSession(result.body.name);
+        return loadState();
+      }).catch(function () {
+        message.textContent = "ログインできませんでした。";
+      });
+    }
+
     function saveState() {
       if (!loaded) {
         return;
@@ -146,6 +292,10 @@
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: body
+        }).then(function (res) {
+          if (res.status === 401) {
+            showLogin("ログインすると回せます。");
+          }
         });
       }).catch(function () {});
     }
@@ -216,6 +366,9 @@
       if (!ready) {
         return;
       }
+      if (event.target.closest("#account")) {
+        return;
+      }
       if (performance.now() - gestureAt < 400) {
         return;
       }
@@ -263,20 +416,40 @@
       });
     });
 
-    fetch("/api/state").then(function (res) {
+    loginForm.addEventListener("submit", function (event) {
+      event.preventDefault();
+      auth("/api/login");
+    });
+
+    document.getElementById("register").addEventListener("click", function () {
+      auth("/api/register");
+    });
+
+    document.getElementById("logout").addEventListener("click", function () {
+      fetch("/api/logout", { method: "POST" }).then(function () {
+        showLogin("ログインすると回せます。");
+        angle = -15;
+        speed = 1;
+        draw();
+      });
+    });
+
+    fetch("/api/me").then(function (res) {
       if (!res.ok) {
-        throw new Error("state");
+        showLogin("ログインすると回せます。");
+        return null;
       }
       return res.json();
-    }).then(function (state) {
-      angle = Number(state.angle);
-      omega = Number(state.omega);
-      speed = Number(state.speed);
-      loaded = true;
-    }).catch(function () {}).then(function () {
-      ready = true;
+    }).then(function (me) {
+      if (!me) {
+        return;
+      }
+      showSession(me.name);
+      return loadState();
+    }).catch(function () {
+      showLogin("ログインすると回せます。");
+    }).then(function () {
       draw();
-      syncTick();
       requestAnimationFrame(frame);
     });
   </script>

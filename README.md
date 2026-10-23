@@ -1,21 +1,22 @@
 # 風車
 
-画面の中央で回す風車です。学校の課題として、要件を決めてから画面とサーバを作りました。利用者は nsb 一人です。
+画面の中央で回す風車です。学校の課題として、要件を決めてから画面とサーバを作りました。使う人は、登録した人です。
 
 羽根は4枚で、色は赤、青、黄、緑です。中心にピンがあり、下に柄があります。柄は回りません。
 
-向き、回転、倍率は Durable Object に残します。ページを開き直すと、残した状態から続きます。初めて開いたときは、止まって、長さは約4.2cm、向きは真上から左へ15度、倍率は1.0倍です。
+ログインしてから回します。向き、回転、倍率は、そのアカウントの SQLite の1行に残します。ページを開き直すと、残した状態から続きます。登録した直後は、止まって、長さは約4.2cm、向きは真上から左へ15度、倍率は1.0倍です。
 
 ## 技術スタック
 
-| 層 | 技術 | 場所 | 役割 |
-|---|---|---|---|
-| フロントエンド | HTML、CSS、JavaScript | `spinner/frontend/index.html` | 風車を描き、押した操作を API へ送る。回転の描画はブラウザの中で行う |
-| バックエンド | Cloudflare Workers | `spinner/backend/worker.js` | `127.0.0.1:8787` で画面を渡し、`/api/state` を Durable Object へ渡す |
-| 状態 | Cloudflare Durable Objects（DO） | `spinner/durable-object/pinwheel.js` | 向き、回転、倍率を1行で残す。中のストレージは Durable Object の SQLite |
-| 手元の起動 | Wrangler | `spinner/wrangler.toml` | ローカルで Workers と Durable Object を動かす。実行時のアプリ用パッケージは入れない |
+| 層 | 言語 | フレームワークまたは製品 | 実行環境 | 場所 |
+|---|---|---|---|---|
+| フロントエンド | HTML、CSS、JavaScript | なし | ブラウザ | `spinner/frontend/index.html` |
+| バックエンド | JavaScript | Hono 4.13 | Cloudflare Workers。手元は Wrangler | `spinner/backend/worker.js` |
+| データベース | SQL | SQLite | Durable Object の SQLite ストレージ | `spinner/durable-object/pinwheel.js` |
 
-PostgreSQL、RDS、ファイルの SQLite は置きません。状態の置き場所は Durable Object です。請求は 0 円です。手元の `wrangler dev` は Cloudflare のアカウントなしで動きます。
+Cloudflare Workers と Durable Objects は、プログラムを動かす場所です。言語は JavaScript、フレームワークは Hono、データベースは SQLite です。PostgreSQL と RDS は置きません。請求は 0 円です。手元の `wrangler dev` は Cloudflare のアカウントなしで動きます。
+
+パス、本体、状態コードは [API仕様書](spinner/ドキュメント/API仕様書.md) です。
 
 ## 開き方
 
@@ -31,6 +32,8 @@ npx wrangler dev
 
 ## 押したとき
 
+画面の上で名前とパスワードを入れ、登録またはログインします。ログインしていないあいだは、風車は回りません。ログアウトすると、もう一度ログインするまで回せません。
+
 | 操作 | 結果 |
 |---|---|
 | 風車をクリック | 止まっていれば時計回りに回る。回っていれば止まる |
@@ -40,7 +43,7 @@ npx wrangler dev
 | 風車より右 | 時計回り。印は↻。回転は止まらない |
 | それ以外 | 回転が止まる |
 
-操作のたびに、向き、回転、倍率を Durable Object へ書きます。回っているあいだは、向きを短い間隔で更新します。
+操作のたびに、向き、回転、倍率を、そのアカウントの SQLite の行へ書きます。回っているあいだは、向きを短い間隔で更新します。別のアカウントの行は変わりません。
 
 ## 資料
 
